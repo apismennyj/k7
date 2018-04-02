@@ -12,10 +12,10 @@ pip install -r requirements.txt
 
 In order to play with workers amount I've added -w parameter:
 
-python k7 run -n 10 -w 10 https://www.nzta.govt.nz
+`python k7 run -n 10 -w 10 https://www.nzta.govt.nz`
 
 I will affect to overall run time:
-
+```
 $ python k7 run -n 10 -w 1 https://www.nzta.govt.nz
 Starting 1 workers:
  id;               start;                stop;            duration
@@ -32,7 +32,8 @@ Starting 1 workers:
 Total processed data amount: 261700bytes
 Request durations: min=0.3990919589996338s, avg=0.756910252571106s, max=1.1380689144134521s
 Finished in 7.570586919784546s
-
+```
+```
 $ python k7 run -n 10 -w 10 https://www.nzta.govt.nz
 Starting 10 workers:
  id;               start;                stop;            duration
@@ -49,4 +50,4 @@ Starting 10 workers:
 Total processed data amount: 261700bytes
 Request durations: min=0.42186474800109863s, avg=1.0478447437286378s, max=1.6209688186645508s
 Finished in 1.6239750385284424s
-
+```
