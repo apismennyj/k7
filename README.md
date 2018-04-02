@@ -14,7 +14,7 @@ In order to play with workers amount I've added -w parameter:
 
 `python k7 run -n 10 -w 10 https://www.nzta.govt.nz`
 
-I will affect to overall run time:
+It will affect to overall run time:
 ```
 $ python k7 run -n 10 -w 1 https://www.nzta.govt.nz
 Starting 1 workers:
