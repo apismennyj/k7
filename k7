@@ -1,0 +1,96 @@
+#! /usr/bin/env python
+import argparse
+import asyncio
+import concurrent.futures
+import errno
+import statistics
+import sys
+from time import time
+from urllib.parse import urlparse
+
+import requests
+
+parser = argparse.ArgumentParser(description="Example: python k7 run -n 10 http://google.es")
+parser.add_argument('run', action='store', help='Run a load cycle')
+parser.add_argument('-n', action='store', dest='n', help='Number of requests', required=True)
+parser.add_argument('-w', '--workers', action='store', dest='workers', help='Number of workers', default=100)
+parser.add_argument('url', action='store', help='URL to test')
+
+args = parser.parse_args()
+
+# Some simple validation just to catch dumb parameters
+
+if args.run != 'run':
+    print('Error: Command to perform load test should be "run"')
+
+try:
+    n = int(args.n)
+except:
+    print(f'Error: The -n argument should be integer > 0, {args.n} given')
+    sys.exit(errno.EINVAL)
+
+try:
+    workers = int(args.workers)
+except:
+    print(f'Error: The -w argument should be integer > 0, {args.workers} given')
+    sys.exit(errno.EINVAL)
+
+url_parsed = urlparse(args.url)
+
+if not url_parsed.scheme and not url_parsed.netloc:
+    print(f'Error: URL should have a scheme and location, for example: http://google.com, but {args.url} given')
+
+def make_request(url):
+    """
+    Simple requester which requests given URL and returns response with come metrics
+    :param url: string
+    :return: dict
+    """
+    start = time()
+    response = requests.get(url)
+    stop = time()
+    return {'start': start,
+            'stop': stop,
+            'duration': stop - start,
+            'response': response,
+            'size': len(response.text)
+            }
+
+
+async def main(url, requests_amount):
+    data_processed_bytes = 0
+    data_processed_durations = []
+
+    print(f'Starting {workers} workers:')
+    start = time()
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        loop = asyncio.get_event_loop()
+        futures = [
+            loop.run_in_executor(
+                executor,
+                make_request,
+                url
+            )
+            for i in range(requests_amount)
+        ]
+
+        i = 0
+        # Output data in "CSV" format to be able to analyze it later. Rought analysis was made while I just
+        # draw a diagram based on these numbers.
+        print(' id;               start;                stop;            duration')
+
+        for result in await asyncio.gather(*futures):
+            i = i + 1
+            print(f'''{i:3};{result['start']:20};{result['stop']:20};{result['duration']:20}''')
+
+            # Fill cumulative counters
+            data_processed_bytes = data_processed_bytes + result['size']
+            data_processed_durations.append(result['duration'])
+
+    print(f'Total processed data amount: {data_processed_bytes}bytes')
+    print(f'Request durations: min={min(data_processed_durations)}s, avg={statistics.mean(data_processed_durations)}s, max={max(data_processed_durations)}s')
+    print(f'Finished in {time()-start}s')
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main(url_parsed.geturl(), n))
